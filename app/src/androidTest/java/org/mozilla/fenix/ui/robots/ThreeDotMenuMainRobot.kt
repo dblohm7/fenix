@@ -166,7 +166,7 @@ class ThreeDotMenuMainRobot {
         private val mDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
 
         fun openSettings(interact: SettingsRobot.() -> Unit): SettingsRobot.Transition {
-            onView(withId(R.id.mozac_browser_menu_recyclerView)).perform(ViewActions.swipeDown())
+            onView(withId(R.id.mozac_browser_menu_recyclerView)).perform(swipeUp())
             onView(allOf(withResourceName("text"), withText(R.string.browser_menu_settings)))
                 .check(matches(withEffectiveVisibility(Visibility.VISIBLE)))
                 .check(matches(isCompletelyDisplayed()))
