@@ -7,10 +7,13 @@
 package org.mozilla.fenix.ui.robots
 
 import android.net.Uri
+import android.util.Log
+import android.view.View
 import androidx.recyclerview.widget.RecyclerView
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.IdlingRegistry
 import androidx.test.espresso.IdlingResource
+import androidx.test.espresso.IdlingResourceTimeoutException
 import androidx.test.espresso.action.ViewActions
 import androidx.test.espresso.action.ViewActions.pressImeActionButton
 import androidx.test.espresso.action.ViewActions.replaceText
@@ -20,6 +23,7 @@ import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.contrib.RecyclerViewActions
 import androidx.test.espresso.matcher.ViewMatchers
 import androidx.test.espresso.matcher.ViewMatchers.hasDescendant
+import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withContentDescription
 import androidx.test.espresso.matcher.ViewMatchers.withEffectiveVisibility
 import androidx.test.espresso.matcher.ViewMatchers.withId
@@ -36,9 +40,11 @@ import org.hamcrest.CoreMatchers.anyOf
 import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.CoreMatchers.not
 import org.mozilla.fenix.R
+import org.mozilla.fenix.ext.asActivity
 import org.mozilla.fenix.helpers.SessionLoadedIdlingResource
 import org.mozilla.fenix.helpers.TestAssetHelper.waitingTime
 import org.mozilla.fenix.helpers.TestHelper.packageName
+import org.mozilla.fenix.helpers.ViewVisibilityIdlingResource
 import org.mozilla.fenix.helpers.assertions.AwesomeBarAssertion.Companion.suggestionsAreEqualTo
 import org.mozilla.fenix.helpers.assertions.AwesomeBarAssertion.Companion.suggestionsAreGreaterThan
 import org.mozilla.fenix.helpers.click
@@ -124,6 +130,51 @@ class NavigationToolbarRobot {
                     )
                 )
                     .check(matches(withEffectiveVisibility(ViewMatchers.Visibility.VISIBLE)))
+            }
+
+            BrowserRobot().interact()
+            return BrowserRobot.Transition()
+        }
+
+        fun openTrackingProtectionTestPage(
+            url: Uri,
+            interact: BrowserRobot.() -> Unit
+        ): BrowserRobot.Transition {
+            sessionLoadedIdlingResource = SessionLoadedIdlingResource()
+
+            mDevice.waitNotNull(
+                Until.findObject(By.res("$packageName:id/toolbar")), waitingTime
+            )
+
+            urlBar().click()
+
+            mDevice.waitNotNull(
+                Until.findObject(By.res("$packageName:id/mozac_browser_toolbar_edit_url_view")),
+                waitingTime
+            )
+
+            awesomeBar().perform(replaceText(url.toString()), pressImeActionButton())
+
+            runWithIdleRes(sessionLoadedIdlingResource) {
+                try {
+                    onView(withResourceName("onboarding_message"))
+                        .check(matches(isDisplayed()))
+                } catch (e: IdlingResourceTimeoutException) {
+                    Log.d(
+                        "TestLog",
+                        "Waiting for the session to be idle timed out. Exception: ${e.message}"
+                    )
+                    openThreeDotMenu {
+                    }.stopPageLoad {
+                        if (!mDevice.findObject(
+                                UiSelector().resourceId("$packageName:id/onboarding_message")
+                            ).waitForExists(waitingTime)
+                        ) {
+                            openThreeDotMenu {
+                            }.refreshPage { }
+                        }
+                    }
+                }
             }
 
             BrowserRobot().interact()
